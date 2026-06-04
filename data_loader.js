@@ -269,7 +269,8 @@ export async function getAnalytics() {
           _id: '$segment',
           total_bookings: { $sum: 1 },
           cancellations: { $sum: '$is_cancelled' },
-          avg_price: { $avg: '$price' }
+          avg_price: { $avg: '$price' },
+          avg_lead_time: { $avg: '$lead_time_days' }
         }
       },
       {
@@ -279,6 +280,7 @@ export async function getAnalytics() {
           cancellations: 1,
           cancellation_rate: { $divide: ['$cancellations', '$total_bookings'] },
           avg_price: 1,
+          avg_lead_time: 1,
           _id: 0
         }
       }
@@ -381,11 +383,12 @@ export async function getAnalytics() {
 
     // Segment
     if (!segmentMap[b.segment]) {
-      segmentMap[b.segment] = { total_bookings: 0, cancellations: 0, total_price: 0 };
+      segmentMap[b.segment] = { total_bookings: 0, cancellations: 0, total_price: 0, total_lead_time: 0 };
     }
     segmentMap[b.segment].total_bookings++;
     segmentMap[b.segment].cancellations += b.is_cancelled;
     segmentMap[b.segment].total_price += b.price;
+    segmentMap[b.segment].total_lead_time += b.lead_time_days;
 
     // Lead Time bucket
     let bucket = "90+ days";
@@ -423,7 +426,8 @@ export async function getAnalytics() {
     total_bookings: val.total_bookings,
     cancellations: val.cancellations,
     cancellation_rate: val.cancellations / val.total_bookings,
-    avg_price: val.total_price / val.total_bookings
+    avg_price: val.total_price / val.total_bookings,
+    avg_lead_time: val.total_lead_time / val.total_bookings
   }));
 
   const lead_time = Object.entries(leadTimeMap).map(([bucket, val]) => ({
