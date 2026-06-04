@@ -70,7 +70,7 @@ function getCleanSegment(segment) {
 // Data synchronization and CSV loading
 export async function initializeData(mongoConnectedStatus) {
   isMongoConnected = mongoConnectedStatus;
-  const csvFilePath = path.join(process.cwd(), '../dailyReport_27-04-2026.csv');
+  const csvFilePath = path.join(process.cwd(), 'dailyReport_27-04-2026.csv');
   
   if (!fs.existsSync(csvFilePath)) {
     console.error(`❌ Data CSV file not found at: ${csvFilePath}`);
