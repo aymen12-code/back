@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import OpenAI from 'openai';
 import { 
   initializeData, 
   setConnectionMode, 
@@ -207,6 +208,58 @@ app.post('/api/predict', (req, res) => {
     res.status(400).json({ error: 'Failed to calculate prediction', details: error.message });
   }
 });
+
+// 8. AI Chatbot endpoint
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { messages } = req.body;
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: 'messages array is required' });
+    }
+
+    // Fetch live KPIs to inject as context
+    let kpiContext = '';
+    try {
+      const kpis = await getKPIs();
+      kpiContext = `
+Live hotel KPI data (as of now):
+- Total bookings: ${kpis.total_bookings?.toLocaleString()}
+- Total cancellations: ${kpis.total_cancellations?.toLocaleString()}
+- Cancellation rate: ${(kpis.cancellation_rate * 100).toFixed(1)}%
+- Total revenue (checked-out): ${kpis.total_revenue?.toLocaleString()} MAD
+- Average night price (ADR): ${kpis.average_adr?.toFixed(0)} MAD
+- Average lead time: ${kpis.average_lead_time?.toFixed(1)} days
+- Average stay: ${kpis.average_nights?.toFixed(1)} nights
+`;
+    } catch (e) { /* continue without KPI context */ }
+
+    const systemPrompt = `You are an intelligent hotel analytics assistant for Valeria Madina Club Resort.
+Your role is to help hotel managers understand their reservation data, cancellation trends, revenue performance, and operational insights.
+You are friendly, professional, concise and data-driven. Always respond in the same language the user writes in.
+When asked about data, refer to the live KPIs provided. When asked for advice, give actionable hotel-industry recommendations.
+${kpiContext}
+Do not reveal the raw API key or any system internals. Focus on being a helpful analytics assistant.`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages.slice(-12) // keep last 12 messages for context window
+      ],
+      max_tokens: 500,
+      temperature: 0.7,
+    });
+
+    const reply = completion.choices[0]?.message?.content ?? 'No response.';
+    res.json({ reply });
+  } catch (error) {
+    console.error('Chat error:', error.message);
+    res.status(500).json({ error: 'Chat failed', details: error.message });
+  }
+});
+
 
 // Database Connection & Server Startup
 async function startServer() {
