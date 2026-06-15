@@ -122,7 +122,7 @@ export async function initializeData(mongoConnectedStatus) {
           reservationStatus: status,
           customer: row.customer ? row.customer.trim() : '',
           mainGuest: row.mainGuest ? row.mainGuest.trim() : '',
-          roomName: row.roomName ? row.roomName.trim() : '',
+          roomName: (row.roomName && row.roomName.trim().toLowerCase() !== 'null') ? row.roomName.trim() : '',
           roomType: row.roomType ? row.roomType.trim() : '',
           roomCategory,
           adult: row.adult ? parseInt(row.adult, 10) || 2 : 2,
@@ -353,6 +353,7 @@ export async function getAnalytics() {
       { $sort: { month_year: 1 } }
     ]);
 
+
     return {
       room_category: roomAgg,
       segment: segmentAgg,
@@ -444,6 +445,7 @@ export async function getAnalytics() {
     cancellation_rate: val.cancellations / val.total_bookings,
     revenue: val.revenue
   })).sort((a, b) => a.month_year.localeCompare(b.month_year));
+
 
   return { room_category, segment, lead_time, monthly_trends };
 }

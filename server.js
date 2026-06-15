@@ -210,10 +210,17 @@ app.post('/api/predict', (req, res) => {
 });
 
 // 8. AI Chatbot endpoint
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let openai = null;
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 app.post('/api/chat', async (req, res) => {
   try {
+    if (!openai) {
+      return res.status(503).json({ error: 'AI chatbot is unavailable — OPENAI_API_KEY is not configured.' });
+    }
+
     const { messages } = req.body;
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'messages array is required' });
